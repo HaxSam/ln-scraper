@@ -91,9 +91,4 @@ impl LightnovelList {
 		self.page = page.unwrap_or(self.page + 1);
 		self.scrape().await
 	}
-	pub fn print_list(&self) {
-		for ln in &self.list {
-			println!("{}", ln.title);
-		}
-	}
 }
