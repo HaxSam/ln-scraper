@@ -1,0 +1,11 @@
+[package]
+name = "ln-cli"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ln-lib = { path = "../ln-lib" }
+surf = "2.3.2"
+tokio = { version = "1.17.0", features = ["full"] }
