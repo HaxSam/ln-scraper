@@ -3,7 +3,6 @@ use std::error::Error;
 use surf::Client;
 
 fn get_title_href(body: &String) -> Result<Vec<(String, String)>, Box<dyn Error>> {
-	let now = std::time::Instant::now();
 	let document = Html::parse_document(&body);
 
 	let div_select = Selector::parse("div.home-truyendecu").unwrap();
@@ -19,7 +18,6 @@ fn get_title_href(body: &String) -> Result<Vec<(String, String)>, Box<dyn Error>
 			result.push((title.to_string(), href.to_string()));
 		});
 	});
-	print!("{}", now.elapsed().as_millis());
 	Ok(result)
 }
 

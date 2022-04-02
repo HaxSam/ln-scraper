@@ -5,12 +5,11 @@ use surf::{Client, Config, Url};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-	let client: Client = Config::new()
-		.set_base_url(Url::parse("https://readlightnovels.net")?)
-		.try_into()?;
-
-	let mut list = LightnovelList::new(LightnovelCategory::Latest, client);
+	let mut list = LightnovelList::new(LightnovelCategory::Genre(String::from("actions")))?;
 	list.scrape().await?;
+	list.print_list();
+	list.next_page(None).await?;
+	list.print_list();
 
 	Ok(())
 }

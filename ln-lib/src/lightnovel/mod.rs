@@ -1,7 +1,7 @@
 mod scrape;
 
 use std::error::Error;
-use surf::Client;
+use surf::{Client, Config, Url};
 
 pub struct Lightnovel {
 	title: String,
@@ -60,13 +60,16 @@ impl LightnovelChapter {
 }
 
 impl LightnovelList {
-	pub fn new(listtype: LightnovelCategory, client: Client) -> Self {
-		Self {
+	pub fn new(listtype: LightnovelCategory) -> Result<Self, Box<dyn Error>> {
+		let client: Client = Config::new()
+			.set_base_url(Url::parse("https://readlightnovels.net")?)
+			.try_into()?;
+		Ok(Self {
 			client,
 			category: listtype,
 			page: 1,
 			list: vec![],
-		}
+		})
 	}
 	pub async fn scrape(&mut self) -> Result<(), Box<dyn Error>> {
 		let data = match &self.category {
