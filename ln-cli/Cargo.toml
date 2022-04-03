@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 ln-lib = { path = "../ln-lib" }
-surf = "2.3.2"
 tokio = { version = "1.17.0", features = ["full"] }

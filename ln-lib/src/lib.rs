@@ -1,21 +1,26 @@
 #![allow(dead_code)]
 mod scrape;
 
-use scrape::lightnovel as lnScrape;
-
+use std::clone::Clone;
 use std::error::Error;
+
+use scrape::{chapter as chScrape, lightnovel as lnScrape};
 use surf::{Client, Config, Url};
 
+#[derive(Clone)]
 pub struct Lightnovel {
 	id: Option<i32>,
 	title: String,
 	url: String,
 	genre: Vec<LightnovelCategory>,
-	chapter: Vec<Box<LightnovelChapter>>,
+	chapters: Vec<Box<LightnovelChapter>>,
 	chapter_number: i32,
 }
+
+#[derive(Clone)]
 pub struct LightnovelChapter {
 	title: String,
+	url: String,
 	paragraph: Vec<String>,
 }
 pub struct LightnovelList {
@@ -24,6 +29,8 @@ pub struct LightnovelList {
 	page: i32,
 	list: Vec<Lightnovel>,
 }
+
+#[derive(Clone)]
 pub enum LightnovelCategory {
 	Latest,
 	Completed,
@@ -38,7 +45,7 @@ impl Lightnovel {
 			title,
 			url,
 			genre: genre.unwrap_or(vec![]),
-			chapter: vec![],
+			chapters: vec![],
 			chapter_number: 0,
 		}
 	}
@@ -48,15 +55,27 @@ impl Lightnovel {
 		}
 	}
 	fn add_chapter(&mut self, chapter: LightnovelChapter) {
-		self.chapter.push(Box::new(chapter));
+		self.chapters.push(Box::new(chapter));
+	}
+	pub async fn scrape_chapter_page(&mut self, page: Option<i32>) -> Result<(), Box<dyn Error>> {
+		let data = chScrape::get_chapters(self, page).await?;
+
+		self.chapters = vec![];
+
+		for (title, url) in data {
+			self.add_chapter(LightnovelChapter::new(title, url));
+		}
+
+		Ok(())
 	}
 }
 
 impl LightnovelChapter {
-	fn new(title: String, paragraph: Option<Vec<String>>) -> Self {
+	fn new(title: String, url: String) -> Self {
 		Self {
 			title,
-			paragraph: paragraph.unwrap_or(vec![]),
+			url,
+			paragraph: vec![],
 		}
 	}
 	fn add_paragraph(&mut self, paragraph: String) {
@@ -92,13 +111,22 @@ impl LightnovelList {
 
 		Ok(())
 	}
-	pub async fn next_page(&mut self, page: Option<i32>) -> Result<(), Box<dyn Error>> {
-		self.page = page.unwrap_or(self.page + 1);
+	pub async fn next_page(&mut self) -> Result<(), Box<dyn Error>> {
+		self.page += 1;
 		self.scrape().await
 	}
-	pub fn print_list(&self) {
-		for ln in &self.list {
-			println!("{}", ln.title);
-		}
+	pub async fn perv_page(&mut self) -> Result<(), Box<dyn Error>> {
+		self.page -= 1;
+		self.scrape().await
+	}
+	pub async fn go_to_page(&mut self, page: i32) -> Result<(), Box<dyn Error>> {
+		self.page = page;
+		self.scrape().await
+	}
+	pub fn get_lightnovel(self, index: usize) -> Lightnovel {
+		self.list.get(index).unwrap().clone()
+	}
+	pub fn get_lightnovels(&self) -> Vec<Lightnovel> {
+		self.list.clone()
 	}
 }
