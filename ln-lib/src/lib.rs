@@ -4,7 +4,7 @@ mod scrape;
 use std::clone::Clone;
 use std::error::Error;
 
-use scrape::{chapter as chScrape, lightnovel as lnScrape};
+use scrape::{chapter as chScrape, lightnovel as lnScrape, paragraph as pScrape};
 use surf::{Client, Config, Url};
 
 #[derive(Clone)]
@@ -13,7 +13,7 @@ pub struct Lightnovel {
 	title: String,
 	url: String,
 	genre: Vec<LightnovelCategory>,
-	chapters: Vec<Box<LightnovelChapter>>,
+	chapters: Vec<LightnovelChapter>,
 	chapter_number: i32,
 }
 
@@ -49,13 +49,13 @@ impl Lightnovel {
 			chapter_number: 0,
 		}
 	}
+	fn add_chapter(&mut self, chapter: LightnovelChapter) {
+		self.chapters.push(chapter);
+	}
 	fn add_genre(&mut self, gendre: LightnovelCategory) {
 		if let LightnovelCategory::Genre(g) = gendre {
 			self.genre.push(LightnovelCategory::Genre(g));
 		}
-	}
-	fn add_chapter(&mut self, chapter: LightnovelChapter) {
-		self.chapters.push(Box::new(chapter));
 	}
 	pub async fn scrape_chapter_page(&mut self, page: Option<i32>) -> Result<(), Box<dyn Error>> {
 		let data = chScrape::get_chapters(self, page).await?;
@@ -67,6 +67,12 @@ impl Lightnovel {
 		}
 
 		Ok(())
+	}
+	pub fn get_lightnovel_chapter(&self, index: i32) -> LightnovelChapter {
+		self.chapters.get(index as usize).unwrap().clone()
+	}
+	pub fn get_lightnovel_chapters(&self) -> Vec<LightnovelChapter> {
+		self.chapters.clone()
 	}
 }
 
@@ -80,6 +86,20 @@ impl LightnovelChapter {
 	}
 	fn add_paragraph(&mut self, paragraph: String) {
 		self.paragraph.push(paragraph);
+	}
+	pub async fn scrape_paragraph(&mut self) -> Result<(), Box<dyn Error>> {
+		let data = pScrape::get_paragraph(&self).await?;
+
+		self.paragraph = vec![];
+
+		for paragraph in data {
+			self.add_paragraph(paragraph);
+		}
+
+		Ok(())
+	}
+	pub fn get_lightnovel_paragraphs(&self) -> Vec<String> {
+		self.paragraph.clone()
 	}
 }
 

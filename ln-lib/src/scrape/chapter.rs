@@ -1,6 +1,7 @@
+use std::error::Error;
+
 use crate::Lightnovel;
 use scraper::{Html, Selector};
-use std::error::Error;
 use surf::http::convert::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]

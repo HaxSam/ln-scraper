@@ -1,5 +1,6 @@
-use scraper::{Html, Selector};
 use std::error::Error;
+
+use scraper::{Html, Selector};
 use surf::Client;
 
 fn get_title_href(body: &String) -> Result<Vec<(String, String)>, Box<dyn Error>> {
