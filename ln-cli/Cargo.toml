@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 ln-lib = { path = "../ln-lib" }
+skim = "0.9.4"
 tokio = { version = "1.17.0", features = ["full"] }
