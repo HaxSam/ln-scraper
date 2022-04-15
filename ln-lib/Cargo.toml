@@ -1,9 +1,10 @@
 [package]
 name = "ln-lib"
+description = "A little lib to scrape lightnovels"
 version = "1.1.0"
+repository = "https://github.com/HaxSam/ln-scraper"
+license = "MIT"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 surf = "2.3.2"

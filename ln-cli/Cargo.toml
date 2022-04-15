@@ -1,11 +1,13 @@
 [package]
 name = "ln-cli"
+description = "A lightnovel scraper to read your lightnovel in the Terminal"
 version = "0.1.0"
+repository = "https://github.com/HaxSam/ln-scraper"
+license = "MIT"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 ln-lib = { path = "../ln-lib" }
 skim = "0.9.4"
+clap = { version = "3.1.8", features = ["derive"] }
 tokio = { version = "1.17.0", features = ["full"] }
