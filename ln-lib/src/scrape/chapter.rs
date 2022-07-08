@@ -10,26 +10,46 @@ struct ChapterResponse {
 	pagination: String,
 }
 
-fn get_id(document: &Html) -> Result<i32, Box<dyn Error>> {
+fn get_id(document: &Html) -> Result<Option<i32>, Box<dyn Error>> {
 	let id_selector = Selector::parse("input#id_post").unwrap();
-	let first_element = document.select(&id_selector).next().unwrap();
+	let first_element = document.select(&id_selector).next();
 
-	let id = first_element.value().attr("value").unwrap();
+	match first_element {
+		Some(element) => {
+			let id = element.value().attr("value").unwrap();
+			Ok(Some(id.parse::<i32>().unwrap()))
+		}
+		None => Ok(None),
+	}
+}
 
-	Ok(id.parse::<i32>()?)
+fn get_last_page(document: &Html) -> Result<Option<i32>, Box<dyn Error>> {
+	let last_page_selector = Selector::parse("a[data-page]").unwrap();
+	let last_page_element = document.select(&last_page_selector).last();
+
+	match last_page_element {
+		Some(element) => {
+			let last_page = element.value().attr("data-page").unwrap();
+			Ok(Some(last_page.parse::<i32>().unwrap()))
+		}
+		None => Ok(None),
+	}
 }
 
 pub async fn get_chapters(
 	ln: &mut Lightnovel, page: Option<i32>,
-) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+) -> Result<Option<Vec<(String, String)>>, Box<dyn Error>> {
 	match ln.id {
 		None => {
-			let mut res = surf::get(ln.url.clone()).await?;
+			let req = surf::get(ln.url.clone());
+			let client = surf::client().with(surf::middleware::Redirect::new(3));
+			let mut res = client.send(req).await?;
 			let res_body = res.body_string().await?;
 
 			let document = Html::parse_document(&res_body);
 
-			ln.id = Some(get_id(&document)?);
+			ln.id = get_id(&document)?;
+			ln.last_page = get_last_page(&document)?;
 
 			match page {
 				Some(1) | None => scrape_chapters(&document).await,
@@ -40,7 +60,9 @@ pub async fn get_chapters(
 	}
 }
 
-async fn scrape_chapters_id(id: i32, page: i32) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+async fn scrape_chapters_id(
+	id: i32, page: i32,
+) -> Result<Option<Vec<(String, String)>>, Box<dyn Error>> {
 	let mut res = surf::post("https://readlightnovels.net/wp-admin/admin-ajax.php")
 		.header("content-type", "application/x-www-form-urlencoded")
 		.body_string(format!(
@@ -59,7 +81,7 @@ async fn scrape_chapters_id(id: i32, page: i32) -> Result<Vec<(String, String)>,
 	scrape_chapters(&document_fragment).await
 }
 
-async fn scrape_chapters(document: &Html) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+async fn scrape_chapters(document: &Html) -> Result<Option<Vec<(String, String)>>, Box<dyn Error>> {
 	let chapter_selector = Selector::parse("ul.list-chapter>li>a").unwrap();
 
 	let mut result = Vec::new();
@@ -71,5 +93,9 @@ async fn scrape_chapters(document: &Html) -> Result<Vec<(String, String)>, Box<d
 		result.push((title.to_string(), href.to_string()));
 	});
 
-	Ok(result)
+	if result.is_empty() {
+		return Ok(None);
+	}
+
+	Ok(Some(result))
 }

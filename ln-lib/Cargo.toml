@@ -1,7 +1,8 @@
 [package]
 name = "ln-lib"
 description = "A little lib to scrape lightnovels"
-version = "1.1.0"
+version = "1.2.0"
+authors = ["HaxSam <haxsam@pm.me>"]
 repository = "https://github.com/HaxSam/ln-scraper"
 license = "MIT"
 edition = "2021"
