@@ -1,2 +1,5 @@
 [workspace]
 members = ["ln-lib", "ln-cli"]
+
+[profile.release]
+strip = true

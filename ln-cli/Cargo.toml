@@ -1,7 +1,8 @@
 [package]
 name = "ln-cli"
 description = "A lightnovel scraper to read your lightnovel in the Terminal"
-version = "0.1.0"
+version = "0.3.0"
+authors = ["HaxSam <haxsam@pm.me>"]
 repository = "https://github.com/HaxSam/ln-scraper"
 license = "MIT"
 edition = "2021"
@@ -9,5 +10,7 @@ edition = "2021"
 [dependencies]
 ln-lib = { path = "../ln-lib" }
 skim = "0.9.4"
+tui = "0.18.0"
+crossterm = "0.23.0"
 clap = { version = "3.1.8", features = ["derive"] }
 tokio = { version = "1.17.0", features = ["full"] }
