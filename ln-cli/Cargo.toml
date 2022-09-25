@@ -10,7 +10,6 @@ edition = "2021"
 [dependencies]
 ln-lib = { path = "../ln-lib" }
 skim = "0.9.4"
-tui = "0.18.0"
-crossterm = "0.23.0"
+tuikit = "0.4.6"
 clap = { version = "3.1.8", features = ["derive"] }
 tokio = { version = "1.17.0", features = ["full"] }

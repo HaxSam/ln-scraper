@@ -1,6 +1,5 @@
 use std::error::Error;
 
-use crate::Lightnovel;
 use scraper::{Html, Selector};
 use surf::http::convert::{Deserialize, Serialize};
 
@@ -37,44 +36,40 @@ fn get_last_page(document: &Html) -> Result<Option<i32>, Box<dyn Error>> {
 }
 
 pub async fn get_chapters(
-	ln: &mut Lightnovel, page: Option<i32>,
-) -> Result<Option<Vec<(String, String)>>, Box<dyn Error>> {
-	match ln.id {
+	id: Option<i32>, url: &String, page: Option<i32>,
+) -> Result<(Option<i32>, Option<i32>, Option<Vec<(String, String)>>), Box<dyn Error>> {
+	match id {
 		None => {
-			let req = surf::get(ln.url.clone());
+			let req = surf::get(url);
 			let client = surf::client().with(surf::middleware::Redirect::new(3));
 			let mut res = client.send(req).await?;
 			let res_body = res.body_string().await?;
 
 			let document = Html::parse_document(&res_body);
 
-			ln.id = get_id(&document)?;
-			ln.last_page = get_last_page(&document)?;
+			let id = get_id(&document)?;
+			let last_page = get_last_page(&document)?;
 
-			match page {
-				Some(1) | None => scrape_chapters(&document).await,
-				Some(p) => scrape_chapters_id(ln.id.unwrap(), p).await,
-			}
+			Ok((
+				id,
+				last_page,
+				match page {
+					Some(1) | None => scrape_chapters(&document).await?,
+					Some(p) => scrape_chapters_id(id.unwrap(), p).await?,
+				},
+			))
 		}
-		Some(id) => scrape_chapters_id(id, page.unwrap_or(1)).await,
+		Some(id) => Ok((Some(id), None, scrape_chapters_id(id, page.unwrap_or(1)).await?)),
 	}
 }
 
-async fn scrape_chapters_id(
-	id: i32, page: i32,
-) -> Result<Option<Vec<(String, String)>>, Box<dyn Error>> {
+async fn scrape_chapters_id(id: i32, page: i32) -> Result<Option<Vec<(String, String)>>, Box<dyn Error>> {
 	let mut res = surf::post("https://readlightnovels.net/wp-admin/admin-ajax.php")
 		.header("content-type", "application/x-www-form-urlencoded")
-		.body_string(format!(
-			"action=tw_ajax&type=pagination&id={}&page={}",
-			id, page
-		))
+		.body_string(format!("action=tw_ajax&type=pagination&id={}&page={}", id, page))
 		.await?;
 
-	let ChapterResponse {
-		list_chap,
-		pagination: _,
-	} = res.body_json().await?;
+	let ChapterResponse { list_chap, pagination: _ } = res.body_json().await?;
 
 	let document_fragment = Html::parse_fragment(&list_chap);
 

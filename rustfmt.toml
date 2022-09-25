@@ -1,3 +1,4 @@
+max_width = 150
 tab_spaces = 2
 hard_tabs = true
 fn_args_layout = "Compressed"

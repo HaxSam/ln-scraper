@@ -1,9 +1,5 @@
-#![allow(unused_imports, dead_code)]
+use std::{error::Error, mem, thread};
 
-use std::error::Error;
-use std::thread;
-
-extern crate skim;
 use ln_lib::{Lightnovel, LightnovelChapter, LightnovelList};
 use skim::prelude::*;
 
@@ -37,8 +33,8 @@ pub fn show_ln(list: &mut LightnovelList) -> Option<Lightnovel> {
 		.build()
 		.unwrap();
 
-	for ln in list {
-		let wrapper = LightnovelWrapper { ln: ln.clone() };
+	for mut ln in list {
+		let wrapper = LightnovelWrapper { ln: mem::take(&mut ln) };
 		tx_item.send(Arc::new(wrapper)).unwrap();
 	}
 
@@ -52,19 +48,14 @@ pub fn show_ln(list: &mut LightnovelList) -> Option<Lightnovel> {
 
 	match ln_wrapper_pointer {
 		Some(ln_wrapper_pointer) => {
-			let ln_wrapper: &LightnovelWrapper = (*ln_wrapper_pointer)
-				.as_any()
-				.downcast_ref::<LightnovelWrapper>()
-				.unwrap();
+			let ln_wrapper = (*ln_wrapper_pointer).as_any().downcast_ref::<LightnovelWrapper>().unwrap();
 			Some(ln_wrapper.ln.clone())
 		}
 		None => None,
 	}
 }
 
-pub async fn show_chapters(
-	ln: &mut Lightnovel,
-) -> Result<Option<LightnovelChapter>, Box<dyn Error>> {
+pub async fn show_chapters(ln: &mut Lightnovel) -> Result<Option<LightnovelChapter>, Box<dyn Error>> {
 	let (tx_chapter, rx_chapter): (SkimItemSender, SkimItemReceiver) = unbounded();
 
 	let (tx, rx): (Sender<&str>, Receiver<&str>) = bounded(1);
@@ -88,10 +79,8 @@ pub async fn show_chapters(
 	});
 
 	loop {
-		for ch in ln.into_iter() {
-			let wrapper = LightnovelChapterWarpper {
-				chapter: ch.clone(),
-			};
+		for mut ch in ln.into_iter() {
+			let wrapper = LightnovelChapterWarpper { chapter: mem::take(&mut ch) };
 
 			if rx.try_recv().is_ok() {
 				break;
@@ -110,14 +99,13 @@ pub async fn show_chapters(
 	let selected_itemes = handle.join().unwrap();
 	let chapter_wrapper_pointer = selected_itemes.into_iter().next();
 
-	match chapter_wrapper_pointer {
+	let chapter = match chapter_wrapper_pointer {
 		Some(chapter_wrapper_pointer) => {
-			let chapter_wrapper: &LightnovelChapterWarpper = (*chapter_wrapper_pointer)
-				.as_any()
-				.downcast_ref::<LightnovelChapterWarpper>()
-				.unwrap();
-			Ok(Some(chapter_wrapper.chapter.clone()))
+			let chapter_wrapper = (*chapter_wrapper_pointer).as_any().downcast_ref::<LightnovelChapterWarpper>().unwrap();
+			Some(chapter_wrapper.chapter.clone())
 		}
-		None => Ok(None),
-	}
+		None => None,
+	};
+
+	Ok(chapter)
 }

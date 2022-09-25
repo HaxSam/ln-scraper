@@ -1,14 +1,18 @@
 mod scrape;
 
-use std::clone::Clone;
-use std::error::Error;
-use std::fmt;
-use std::iter::Iterator;
+use std::{clone::Clone, default::Default, error::Error, fmt, iter::Iterator, mem};
 
-use scrape::{chapter as chScrape, lightnovel as lnScrape, paragraph as pScrape};
 use surf::{Client, Config, Url};
 
-#[derive(Clone)]
+#[derive(Default)]
+pub struct LightnovelList {
+	client: Client,
+	category: LightnovelCategory,
+	page: i32,
+	list: Vec<Lightnovel>,
+}
+
+#[derive(Default, Clone)]
 pub struct Lightnovel {
 	id: Option<i32>,
 	title: String,
@@ -18,7 +22,7 @@ pub struct Lightnovel {
 	chapters: Vec<LightnovelChapter>,
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct LightnovelChapter {
 	title: String,
 	url: String,
@@ -26,15 +30,9 @@ pub struct LightnovelChapter {
 	paragraph: Vec<String>,
 }
 
-pub struct LightnovelList {
-	client: Client,
-	category: LightnovelCategory,
-	page: i32,
-	list: Vec<Lightnovel>,
-}
-
-#[derive(Clone)]
+#[derive(Default)]
 pub enum LightnovelCategory {
+	#[default]
 	Latest,
 	Completed,
 	Genre(String),
@@ -54,22 +52,19 @@ impl fmt::Display for LightnovelCategory {
 
 impl LightnovelList {
 	pub fn new(listtype: LightnovelCategory) -> Result<Self, Box<dyn Error>> {
-		let client: Client = Config::new()
-			.set_base_url(Url::parse("https://readlightnovels.net")?)
-			.try_into()?;
+		let client: Client = Config::new().set_base_url(Url::parse("https://readlightnovels.net")?).try_into()?;
 
 		Ok(Self {
 			client,
 			category: listtype,
-			page: 0,
+			page: 1,
 			list: vec![],
 		})
 	}
 
 	pub async fn scrape(&mut self) -> Result<bool, Box<dyn Error>> {
+		use crate::scrape::lightnovel as lnScrape;
 		use LightnovelCategory::*;
-
-		self.page += 1;
 
 		let data = match &self.category {
 			Latest => lnScrape::get_latest_ln(&self.client, self.page).await?,
@@ -79,17 +74,16 @@ impl LightnovelList {
 		};
 
 		match data {
-			Some(data) => {
+			Some(mut data) => {
 				self.list = data
-					.iter()
-					.map(|(title, url)| Lightnovel::new(title.clone(), url.clone()))
+					.iter_mut()
+					.map(|(title, url)| Lightnovel::new(mem::take(title), mem::take(url)))
 					.collect();
+
+				self.page += 1;
 				Ok(true)
 			}
-			None => {
-				self.page -= 1;
-				Ok(false)
-			}
+			None => Ok(false),
 		}
 	}
 
@@ -135,23 +129,28 @@ impl Lightnovel {
 	}
 
 	pub async fn scrape(&mut self) -> Result<bool, Box<dyn Error>> {
-		let data = chScrape::get_chapters(self, Some(self.page)).await?;
+		use crate::scrape::chapter as chScrape;
 
-		self.chapters = vec![];
+		let data = match self.id {
+			Some(id) => {
+				let (_, _, data) = chScrape::get_chapters(Some(id), &self.url, Some(self.page)).await?;
+				data
+			}
+			None => {
+				let data: Option<Vec<(String, String)>>;
+				(self.id, self.last_page, data) = chScrape::get_chapters(None, &self.url, Some(self.page)).await?;
+				data
+			}
+		};
 
 		match data {
-			Some(data) => {
+			Some(mut data) => {
 				self.chapters = data
-					.iter()
+					.iter_mut()
 					.enumerate()
-					.map(|(i, (title, url))| {
-						LightnovelChapter::new(
-							title.clone(),
-							url.clone(),
-							(self.page - 1) * 48 + i as i32 + 1,
-						)
-					})
+					.map(|(i, (title, url))| LightnovelChapter::new(mem::take(title), mem::take(url), (self.page - 1) * 48 + i as i32 + 1))
 					.collect();
+
 				self.page += 1;
 				Ok(true)
 			}
@@ -194,12 +193,29 @@ impl LightnovelChapter {
 		self.chapter_number
 	}
 
+	pub fn len(&self) -> usize {
+		self.paragraph.len()
+	}
+
 	pub async fn scrape(&mut self) -> Result<(), Box<dyn Error>> {
-		let data = pScrape::get_paragraph(&self).await?;
+		use crate::scrape::paragraph as pScrape;
+
+		let data = pScrape::get_paragraph(&self.url).await?;
 
 		self.paragraph = data.iter().map(|p| p.clone()).collect();
 
 		Ok(())
+	}
+}
+
+impl<Idx> std::ops::Index<Idx> for LightnovelChapter
+where
+	Idx: std::slice::SliceIndex<[String]>,
+{
+	type Output = Idx::Output;
+
+	fn index(&self, index: Idx) -> &Self::Output {
+		&self.paragraph[index]
 	}
 }
 
