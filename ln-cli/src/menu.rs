@@ -23,7 +23,7 @@ impl SkimItem for LightnovelChapterWarpper {
 	}
 }
 
-pub fn show_ln(list: &mut LightnovelList) -> Option<Lightnovel> {
+pub fn show_ln(list: &LightnovelList) -> Option<Lightnovel> {
 	let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
 
 	let options = SkimOptionsBuilder::default()
@@ -79,7 +79,7 @@ pub async fn show_chapters(ln: &mut Lightnovel) -> Result<Option<LightnovelChapt
 	});
 
 	loop {
-		for mut ch in ln.into_iter() {
+		for mut ch in ln.clone() {
 			let wrapper = LightnovelChapterWarpper { chapter: mem::take(&mut ch) };
 
 			if rx.try_recv().is_ok() {
