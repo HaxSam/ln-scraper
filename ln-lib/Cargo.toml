@@ -1,7 +1,7 @@
 [package]
 name = "ln-lib"
 description = "A little lib to scrape lightnovels"
-version = "1.3.0"
+version = "2.0.0"
 authors = ["HaxSam <haxsam@pm.me>"]
 repository = "https://github.com/HaxSam/ln-scraper"
 license = "MIT"
@@ -11,4 +11,6 @@ edition = "2021"
 surf = "2.3.2"
 serde = "1.0.89"
 scraper = "0.12.0"
-tokio = { version = "1.17.0", features = ["full"] }
+thiserror = "1.0.37"
+once_cell = "1.15.0"
+url = "2.3.1"
