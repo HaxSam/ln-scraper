@@ -1,8 +1,8 @@
-use std::error::Error;
-
 use scraper::{Html, Selector};
 
-pub async fn get_paragraph(url: &String) -> Result<Vec<String>, Box<dyn Error>> {
+use crate::err::Error;
+
+pub async fn get_paragraph(url: &String) -> Result<Vec<String>, Error> {
 	let mut res = surf::get(url).await?;
 	let res_body = res.body_string().await?;
 
