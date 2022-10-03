@@ -84,7 +84,7 @@ fn parse_html(document: &Html) -> Vec<(String, String)> {
 		.map(|a| {
 			let href = a.value().attr("href").unwrap();
 			let title = a.text().collect::<Vec<_>>().join(" ");
-			(title.to_string(), href.to_string())
+			(title.trim().to_string(), href.to_string())
 		})
 		.collect::<Vec<(String, String)>>()
 }

@@ -64,7 +64,7 @@ impl LightnovelList {
 		self.last_page
 	}
 
-	pub async fn scrape(&mut self) -> Result<bool, Error> {
+	pub async fn scrape(&mut self) -> Result<(), Error> {
 		use LightnovelCategory::*;
 
 		let url = match &self.category {
@@ -82,40 +82,48 @@ impl LightnovelList {
 			.map(|(title, url)| Lightnovel::new(mem::take(title), mem::take(url)))
 			.collect();
 
-		Ok(!self.list.is_empty())
+		Ok(())
 	}
 
 	pub async fn next_scrape(&mut self) -> Result<bool, Error> {
-		self.next_page();
-		self.scrape().await
+		if let None = self.next_page() {
+			return Ok(false);
+		}
+		self.scrape().await?;
+		Ok(self.page != self.last_page.unwrap_or(1))
 	}
 
 	pub async fn open_scrape(&mut self, page: usize) -> Result<bool, Error> {
-		self.open_page(page);
-		self.scrape().await
+		if let None = self.open_page(page) {
+			return Ok(false);
+		}
+		self.scrape().await?;
+		Ok(!self.list.is_empty())
 	}
 
 	pub async fn prev_scrape(&mut self) -> Result<bool, Error> {
-		self.prev_page();
-		self.scrape().await
-	}
-
-	pub fn next_page(&mut self) {
-		if self.page < self.last_page.unwrap_or(1) {
-			self.page += 1;
+		if let None = self.prev_page() {
+			return Ok(false);
 		}
+		self.scrape().await?;
+		Ok(self.page != 1)
 	}
 
-	pub fn open_page(&mut self, page: usize) {
-		if page <= self.last_page.unwrap_or(1) {
+	pub fn next_page(&mut self) -> Option<usize> {
+		self.open_page(self.page + 1)
+	}
+
+	pub fn open_page(&mut self, page: usize) -> Option<usize> {
+		if page <= self.last_page.unwrap_or(1) && page >= 1 {
 			self.page = page;
+			Some(page)
+		} else {
+			None
 		}
 	}
 
-	pub fn prev_page(&mut self) {
-		if self.page > 1 {
-			self.page -= 1;
-		}
+	pub fn prev_page(&mut self) -> Option<usize> {
+		self.open_page(self.page - 1)
 	}
 }
 

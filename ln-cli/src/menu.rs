@@ -88,8 +88,19 @@ pub async fn show_chapters(ln: &mut Lightnovel) -> Result<Option<LightnovelChapt
 
 			tx_chapter.send(Arc::new(wrapper)).unwrap();
 		}
-		let got_chapters = ln.scrape().await?;
+		let got_chapters = ln.next_scrape().await?;
 		if !got_chapters || rx.try_recv().is_ok() {
+			if !got_chapters {
+				for mut ch in ln.clone() {
+					let wrapper = LightnovelChapterWarpper { chapter: mem::take(&mut ch) };
+
+					if rx.try_recv().is_ok() {
+						break;
+					}
+
+					tx_chapter.send(Arc::new(wrapper)).unwrap();
+				}
+			}
 			break;
 		}
 	}
