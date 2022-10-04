@@ -1,7 +1,6 @@
 mod scrape;
 
-use std::ops::Index;
-use std::slice::SliceIndex;
+use std::ops::{Deref, DerefMut};
 use std::vec::IntoIter;
 
 use crate::err::Error;
@@ -46,17 +45,6 @@ impl LightnovelChapter {
 	}
 }
 
-impl<Idx> Index<Idx> for LightnovelChapter
-where
-	Idx: SliceIndex<[String]>,
-{
-	type Output = Idx::Output;
-
-	fn index(&self, index: Idx) -> &Self::Output {
-		&self.paragraph[index]
-	}
-}
-
 impl IntoIterator for LightnovelChapter {
 	type Item = String;
 	type IntoIter = IntoIter<Self::Item>;
@@ -66,11 +54,16 @@ impl IntoIterator for LightnovelChapter {
 	}
 }
 
-impl IntoIterator for &LightnovelChapter {
-	type Item = String;
-	type IntoIter = IntoIter<Self::Item>;
+impl Deref for LightnovelChapter {
+	type Target = Vec<String>;
 
-	fn into_iter(self) -> Self::IntoIter {
-		self.paragraph.clone().into_iter()
+	fn deref(&self) -> &Self::Target {
+		&self.paragraph
+	}
+}
+
+impl DerefMut for LightnovelChapter {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.paragraph
 	}
 }
