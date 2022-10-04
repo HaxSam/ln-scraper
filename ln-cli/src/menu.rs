@@ -23,7 +23,7 @@ impl SkimItem for LightnovelChapterWarpper {
 	}
 }
 
-pub fn show_ln(list: &LightnovelList) -> Option<Lightnovel> {
+pub fn show_ln(list: &mut LightnovelList) -> Option<Lightnovel> {
 	let (tx_item, rx_item): (SkimItemSender, SkimItemReceiver) = unbounded();
 
 	let options = SkimOptionsBuilder::default()
@@ -33,7 +33,7 @@ pub fn show_ln(list: &LightnovelList) -> Option<Lightnovel> {
 		.build()
 		.unwrap();
 
-	for mut ln in list {
+	for mut ln in list.iter_mut() {
 		let wrapper = LightnovelWrapper { ln: mem::take(&mut ln) };
 		tx_item.send(Arc::new(wrapper)).unwrap();
 	}
