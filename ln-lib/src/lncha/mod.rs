@@ -3,7 +3,9 @@ mod scrape;
 use std::ops::{Deref, DerefMut};
 use std::vec::IntoIter;
 
-use crate::err::Error;
+use error_stack::Result;
+
+use crate::err::ChapterError;
 
 #[derive(Default, Debug, Clone)]
 pub struct LightnovelChapter {
@@ -39,7 +41,7 @@ impl LightnovelChapter {
 		self.paragraph.len()
 	}
 
-	pub async fn scrape(&mut self) -> Result<bool, Error> {
+	pub async fn scrape(&mut self) -> Result<bool, ChapterError> {
 		self.paragraph = scrape::get_paragraph(&self.url).await?;
 		Ok(!self.paragraph.is_empty())
 	}

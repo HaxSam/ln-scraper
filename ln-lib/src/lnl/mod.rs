@@ -4,12 +4,13 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::vec::IntoIter;
 
+use error_stack::{IntoReport, Result, ResultExt};
 use surf::{middleware::Redirect, Client, Config, Url};
 
 use super::Lightnovel;
 use super::LightnovelCategory;
 use crate::cnf::{CLIENT, LIGHTNOVEL_SITE};
-use crate::err::Error;
+use crate::err::{ListError, SurfError};
 use scrape::get_ln;
 
 #[derive(Debug)]
@@ -32,17 +33,16 @@ impl Default for LightnovelList {
 }
 
 impl LightnovelList {
-	pub fn new(category: LightnovelCategory) -> Result<Self, Error> {
+	pub fn new(category: LightnovelCategory) -> Result<Self, ListError> {
 		if let None = CLIENT.get() {
-			let url = Url::parse(LIGHTNOVEL_SITE)?;
+			let url = Url::parse(LIGHTNOVEL_SITE)
+				.into_report()
+				.change_context(SurfError::UriParserError.into())?;
 			let config = Config::new().set_base_url(url);
 
-			let tryclient: Result<Client, _> = config.try_into();
+			let client: Client = config.try_into().into_report().change_context(SurfError::ClientCreationError.into())?;
 
-			match tryclient {
-				Ok(client) => CLIENT.set(client.with(Redirect::new(3))).unwrap(),
-				Err(_) => panic!("There is a deep problem while converting the config into the surf client pls create a issue"),
-			};
+			CLIENT.set(client.with(Redirect::new(3))).unwrap();
 		}
 
 		Ok(Self {
@@ -63,7 +63,7 @@ impl LightnovelList {
 		self.last_page
 	}
 
-	pub async fn scrape(&mut self) -> Result<(), Error> {
+	pub async fn scrape(&mut self) -> Result<(), ListError> {
 		use LightnovelCategory::*;
 
 		let url = match &self.category {
@@ -73,7 +73,7 @@ impl LightnovelList {
 			Title(t) => format!("/page/{}?s={}", self.page, t),
 		};
 
-		let (mut data, last_page) = get_ln(url).await?;
+		let (mut data, last_page) = get_ln(&url).await?;
 
 		self.last_page = last_page;
 		self.list = data
@@ -84,7 +84,7 @@ impl LightnovelList {
 		Ok(())
 	}
 
-	pub async fn next_scrape(&mut self) -> Result<bool, Error> {
+	pub async fn next_scrape(&mut self) -> Result<bool, ListError> {
 		if let None = self.next_page() {
 			return Ok(false);
 		}
@@ -92,7 +92,7 @@ impl LightnovelList {
 		Ok(self.page != self.last_page.unwrap_or(1))
 	}
 
-	pub async fn open_scrape(&mut self, page: usize) -> Result<bool, Error> {
+	pub async fn open_scrape(&mut self, page: usize) -> Result<bool, ListError> {
 		if let None = self.open_page(page) {
 			return Ok(false);
 		}
@@ -100,7 +100,7 @@ impl LightnovelList {
 		Ok(!self.list.is_empty())
 	}
 
-	pub async fn prev_scrape(&mut self) -> Result<bool, Error> {
+	pub async fn prev_scrape(&mut self) -> Result<bool, ListError> {
 		if let None = self.prev_page() {
 			return Ok(false);
 		}

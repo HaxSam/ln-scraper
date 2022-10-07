@@ -1,8 +1,9 @@
+use error_stack::{Report, Result};
 use scraper::{Html, Selector};
 use surf::http::convert::{Deserialize, Serialize};
 
 use crate::cnf::CLIENT;
-use crate::err::Error;
+use crate::err::{LightnovelError, SurfError};
 
 #[derive(Deserialize, Serialize)]
 struct ChapterResponse {
@@ -37,17 +38,36 @@ fn get_last_page(document: &Html) -> Option<usize> {
 	}
 }
 
-pub async fn get_cha(url: &String, page: Option<usize>) -> Result<(usize, Option<usize>, Vec<(String, String)>), Error> {
+pub async fn get_cha(url: &String, page: Option<usize>) -> Result<(usize, Option<usize>, Vec<(String, String)>), LightnovelError> {
 	let client = CLIENT.get().unwrap();
 
-	let mut res = client.get(url).send().await?;
-	let res_body = res.body_string().await?;
+	let req = client.get(url);
+	let mut res = match req.send().await {
+		Ok(res) => res,
+		Err(_) => {
+			let msg = format!("There was a problem while with sending the requet to: {}", url);
+			let report = Report::new(SurfError::RequestError(msg.clone()).into());
+			return Err(report.attach_printable(msg.clone()));
+		}
+	};
+	let res_body = match res.body_string().await {
+		Ok(body) => body,
+		Err(_) => {
+			let msg = format!("There was a problem with getting the body from: {}", url);
+			let report = Report::new(SurfError::BodyParseError(msg.clone()).into());
+			return Err(report.attach_printable(msg.clone()));
+		}
+	};
 
 	let document = Html::parse_document(&res_body);
 
 	let id = match get_id(&document) {
 		Some(id) => id,
-		None => return Err(Error::GetIdError),
+		None => {
+			let msg = format!("There was a problem with getting the id from: {}", url);
+			let report = Report::new(LightnovelError::GetIDError);
+			return Err(report.attach_printable(msg.clone()));
+		}
 	};
 
 	let last_page = get_last_page(&document);
@@ -60,16 +80,37 @@ pub async fn get_cha(url: &String, page: Option<usize>) -> Result<(usize, Option
 	Ok((id, last_page, chapters))
 }
 
-pub async fn get_cha_by_id(id: usize, page: usize) -> Result<Vec<(String, String)>, Error> {
+pub async fn get_cha_by_id(id: usize, page: usize) -> Result<Vec<(String, String)>, LightnovelError> {
 	let client = CLIENT.get().unwrap();
 
-	let mut res = client
+	let mut res = match client
 		.post("/wp-admin/admin-ajax.php")
 		.header("content-type", "application/x-www-form-urlencoded")
 		.body_string(format!("action=tw_ajax&type=pagination&id={}&page={}", id, page))
-		.await?;
+		.await
+	{
+		Ok(res) => res,
+		Err(_) => {
+			let msg = format!(
+				"There was a problem while with sending the requet to /wp-admin/admin-ajax.php with the id: {}",
+				id
+			);
+			let report = Report::new(SurfError::RequestError(msg.clone()).into());
+			return Err(report.attach_printable(msg.clone()));
+		}
+	};
 
-	let ChapterResponse { list_chap, pagination: _ } = res.body_json().await?;
+	let ChapterResponse { list_chap, pagination: _ } = match res.body_json().await {
+		Ok(body) => body,
+		Err(_) => {
+			let msg = format!(
+				"There was a problem with getting the json body from /wp-admin/admin-ajax.php with the id: {}",
+				id
+			);
+			let report = Report::new(SurfError::BodyParseError(msg.clone()).into());
+			return Err(report.attach_printable(msg.clone()));
+		}
+	};
 
 	let document_fragment = Html::parse_fragment(&list_chap);
 

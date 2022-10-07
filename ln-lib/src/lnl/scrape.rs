@@ -1,16 +1,31 @@
+use error_stack::{Report, Result};
 use scraper::{Html, Selector};
 
 use crate::cnf::{CLIENT, LIGHTNOVEL_SITE};
-use crate::err::Error;
+use crate::err::{ListError, SurfError};
 
-pub async fn get_ln(url: String) -> Result<(Vec<(String, String)>, Option<usize>), Error> {
+pub async fn get_ln(url: &String) -> Result<(Vec<(String, String)>, Option<usize>), ListError> {
 	let client = CLIENT.get().unwrap();
 
 	let req = client.get(url);
-	let mut res = req.send().await?;
-	let body = res.body_string().await?;
+	let mut res = match req.send().await {
+		Ok(res) => res,
+		Err(_) => {
+			let msg = format!("There was a problem while with sending the requet to: {}", url);
+			let report = Report::new(SurfError::RequestError(msg.clone()).into());
+			return Err(report.attach_printable(msg.clone()));
+		}
+	};
+	let res_body = match res.body_string().await {
+		Ok(body) => body,
+		Err(_) => {
+			let msg = format!("There was a problem with getting the body from: {}", url);
+			let report = Report::new(SurfError::BodyParseError(msg.clone()).into());
+			return Err(report.attach_printable(msg.clone()));
+		}
+	};
 
-	let document = Html::parse_document(&body);
+	let document = Html::parse_document(&res_body);
 
 	let ln_select = Selector::parse("div.home-truyendecu>a").unwrap();
 	let page_select = Selector::parse("a[data-page]").unwrap();

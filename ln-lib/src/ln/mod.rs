@@ -4,11 +4,12 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::vec::IntoIter;
 
+use error_stack::Result;
+
 use super::LightnovelChapter;
-use crate::err::Error;
+use crate::err::LightnovelError;
 use scrape::{get_cha, get_cha_by_id};
 
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Lightnovel {
 	id: Option<usize>,
@@ -61,7 +62,7 @@ impl Lightnovel {
 		self.last_page
 	}
 
-	pub async fn scrape(&mut self) -> Result<(), Error> {
+	pub async fn scrape(&mut self) -> Result<(), LightnovelError> {
 		let (id, last_page, mut data) = match self.id {
 			Some(id) => (id, self.last_page, get_cha_by_id(id, self.page).await?),
 			None => get_cha(&self.url, None).await?,
@@ -79,7 +80,7 @@ impl Lightnovel {
 		Ok(())
 	}
 
-	pub async fn next_scrape(&mut self) -> Result<bool, Error> {
+	pub async fn next_scrape(&mut self) -> Result<bool, LightnovelError> {
 		if let None = self.next_page() {
 			return Ok(false);
 		}
@@ -87,7 +88,7 @@ impl Lightnovel {
 		Ok(self.page != self.last_page.unwrap_or(1))
 	}
 
-	pub async fn open_scrape(&mut self, page: usize) -> Result<bool, Error> {
+	pub async fn open_scrape(&mut self, page: usize) -> Result<bool, LightnovelError> {
 		if let None = self.open_page(page) {
 			return Ok(false);
 		}
@@ -95,7 +96,7 @@ impl Lightnovel {
 		Ok(!self.chapters.is_empty())
 	}
 
-	pub async fn prev_scrape(&mut self) -> Result<bool, Error> {
+	pub async fn prev_scrape(&mut self) -> Result<bool, LightnovelError> {
 		if let None = self.prev_page() {
 			return Ok(false);
 		}
