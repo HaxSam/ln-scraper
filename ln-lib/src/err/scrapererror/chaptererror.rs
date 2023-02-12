@@ -9,7 +9,11 @@ pub enum ChapterError {
 
 impl fmt::Display for ChapterError {
 	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-		fmt.write_str("Chapter error: There is an error acourred while trying to scrape the content from a chapter")
+		let err_text = match self {
+			Self::ScraperError(_) => format!("Chapter error: There is an error acourred while trying to scrape the content from a chapter"),
+		};
+
+		fmt.write_str(&err_text)
 	}
 }
 

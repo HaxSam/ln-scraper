@@ -10,7 +10,12 @@ pub enum LightnovelError {
 
 impl fmt::Display for LightnovelError {
 	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-		fmt.write_str("Lightnovel error: There is an error acourred while trying to scrape the chapters from a lightnovel")
+		let err_text = match self {
+			Self::GetIDError => format!("Lightnovel error: There is an error acourred while trying to get the Lightnovel ID"),
+			Self::ScraperError(_) => format!("Lightnovel error: There is an error acourred while trying to scrape"),
+		};
+
+		fmt.write_str(&err_text)
 	}
 }
 

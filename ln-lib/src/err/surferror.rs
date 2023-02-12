@@ -11,7 +11,14 @@ pub enum SurfError {
 
 impl fmt::Display for SurfError {
 	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-		fmt.write_str("Surf error: There is an error acourred while using the lib surf")
+		let err_text = match self {
+			Self::RequestError(_) => format!("Surf error: There acourred a request error"),
+			Self::BodyParseError(_) => format!("Surf error: There acourred a error while parsing the body"),
+			Self::ClientCreationError => format!("Surf error: There acourred a error while creating a client"),
+			Self::UriParserError => format!("Surf error: There acourred a error while parsing the URI"),
+		};
+
+		fmt.write_str(&err_text)
 	}
 }
 

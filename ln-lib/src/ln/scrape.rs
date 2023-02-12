@@ -1,4 +1,4 @@
-use error_stack::{Report, Result};
+use error_stack::{Report, Result, ResultExt};
 use scraper::{Html, Selector};
 use surf::http::convert::{Deserialize, Serialize};
 
@@ -11,16 +11,16 @@ struct ChapterResponse {
 	pagination: String,
 }
 
-fn get_id(document: &Html) -> Option<usize> {
+fn get_id(document: &Html) -> Result<usize, LightnovelError> {
 	let id_selector = Selector::parse("input#id_post").unwrap();
 	let first_element = document.select(&id_selector).next();
 
 	match first_element {
 		Some(element) => {
 			let id = element.value().attr("value").unwrap();
-			Some(id.parse::<usize>().unwrap())
+			Ok(id.parse::<usize>().unwrap())
 		}
-		None => None,
+		None => Err(Report::new(LightnovelError::GetIDError)),
 	}
 }
 
@@ -42,6 +42,7 @@ pub async fn get_cha(url: &String, page: Option<usize>) -> Result<(usize, Option
 	let client = CLIENT.get().unwrap();
 
 	let req = client.get(url);
+
 	let mut res = match req.send().await {
 		Ok(res) => res,
 		Err(_) => {
@@ -61,14 +62,8 @@ pub async fn get_cha(url: &String, page: Option<usize>) -> Result<(usize, Option
 
 	let document = Html::parse_document(&res_body);
 
-	let id = match get_id(&document) {
-		Some(id) => id,
-		None => {
-			let msg = format!("There was a problem with getting the id from: {}", url);
-			let report = Report::new(LightnovelError::GetIDError);
-			return Err(report.attach_printable(msg.clone()));
-		}
-	};
+	let id = get_id(&document)
+    .attach_printable(format!("There was a problem with getting the id from: {}", url))?;
 
 	let last_page = get_last_page(&document);
 

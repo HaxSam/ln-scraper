@@ -8,6 +8,7 @@ pub async fn get_ln(url: &String) -> Result<(Vec<(String, String)>, Option<usize
 	let client = CLIENT.get().unwrap();
 
 	let req = client.get(url);
+
 	let mut res = match req.send().await {
 		Ok(res) => res,
 		Err(_) => {

@@ -9,7 +9,11 @@ pub enum ListError {
 
 impl fmt::Display for ListError {
 	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-		fmt.write_str("List error: There is an error acourred while trying to scrape the lightnovels")
+		let err_text = match self {
+			Self::ScraperError(_) => format!("List error: There is an error acourred while trying to scrape the lightnovels"),
+		};
+
+		fmt.write_str(&err_text)
 	}
 }
 
