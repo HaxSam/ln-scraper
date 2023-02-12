@@ -2,7 +2,7 @@ use error_stack::{Report, Result};
 use scraper::{Html, Selector};
 use surf::http::convert::{Deserialize, Serialize};
 
-use crate::cnf::CLIENT;
+use crate::cfg::CLIENT;
 use crate::err::{LightnovelError, SurfError};
 
 #[derive(Deserialize, Serialize)]

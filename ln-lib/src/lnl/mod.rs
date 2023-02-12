@@ -9,7 +9,7 @@ use surf::{middleware::Redirect, Client, Config, Url};
 
 use super::Lightnovel;
 use super::LightnovelCategory;
-use crate::cnf::{CLIENT, LIGHTNOVEL_SITE};
+use crate::cfg::{CLIENT, LIGHTNOVEL_SITE};
 use crate::err::{ListError, SurfError};
 use scrape::get_ln;
 

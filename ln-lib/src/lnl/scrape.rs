@@ -1,7 +1,7 @@
 use error_stack::{Report, Result};
 use scraper::{Html, Selector};
 
-use crate::cnf::{CLIENT, LIGHTNOVEL_SITE};
+use crate::cfg::{CLIENT, LIGHTNOVEL_SITE};
 use crate::err::{ListError, SurfError};
 
 pub async fn get_ln(url: &String) -> Result<(Vec<(String, String)>, Option<usize>), ListError> {

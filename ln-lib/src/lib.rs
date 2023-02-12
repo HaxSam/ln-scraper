@@ -1,4 +1,4 @@
-mod cnf;
+mod cfg;
 mod err;
 mod ln;
 mod lncat;
